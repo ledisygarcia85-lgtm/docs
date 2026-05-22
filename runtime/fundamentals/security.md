@@ -1,5 +1,5 @@
 ---
-last_modified: 2026-03-26
+last_modified: 2026-05-21
 title: "Security and permissions"
 description: "A guide to Deno's security model and permissions system. Learn about secure defaults, permission flags, runtime prompts, and how to safely execute code with granular access controls."
 oldUrl:
@@ -45,11 +45,14 @@ the key principles of Deno's security model:
 - **Code can not escalate its privileges without user consent**: Code executing
   in a Deno runtime can not escalate its privileges without the user agreeing
   explicitly to an escalation via interactive prompt or a invocation time flag.
-- **The initial static module graph can import local files without
-  restrictions**: All files that are imported in the initial static module graph
-  can be imported without restrictions, so even if an explicit read permission
-  is not granted for that file. This does not apply to any dynamic module
-  imports.
+- **The initial static module graph can import modules without restrictions**:
+  All modules that are imported in the initial static module graph (local files,
+  npm packages, jsr packages, and remote URLs) are loaded by the runtime without
+  consulting the permission system. No `--allow-read` is required to load local
+  files, and no `--allow-net` is required to fetch remote modules. This
+  exemption applies only to loading. Once code runs, anything it does still goes
+  through the permission system, and dynamic imports are not covered by the
+  exemption.
 
 These key principles are designed to provide an environment where a user can
 execute code with minimal risk of harm to the host machine or network. The
@@ -247,13 +250,13 @@ or perform DNS resolution. This includes making HTTP requests, opening TCP/UDP
 sockets, and listening for incoming connections on TCP or UDP.
 
 Network access is granted using the `--allow-net` flag. This flag can be
-specified with a list of IP addresses or hostnames to allow access to specific
-network addresses.
+specified with a list of hosts to allow access to specific network addresses. A
+host can be a hostname or IP address, optionally with a port.
 
 Hostnames do not allow subdomains, unless explicitly listed. To allow any
 subdomain for a hostname, `*` can be used as wildcard for any subdomain.
 
-Definition: `--allow-net[=<IP_OR_HOSTNAME>...]` or `-N[=<IP_OR_HOSTNAME>...]`
+Definition: `--allow-net[=<HOST>...]` or `-N[=<HOST>...]`
 
 ```sh
 # Allow network access
@@ -277,7 +280,7 @@ deno run --allow-net=1.1.1.1:443 script.ts
 deno run --allow-net=[2606:4700:4700::1111] script.ts
 ```
 
-Definition: `--deny-net[=<IP_OR_HOSTNAME>...]`
+Definition: `--deny-net[=<HOST>...]`
 
 ```sh
 # Allow access to network, but deny access 
